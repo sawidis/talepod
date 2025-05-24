@@ -63,12 +63,12 @@ default_volume: 50
 audiodb_path: "audiodb"
 unknown_card_sfx: "sad_trombone.mp3"
 cards:
-  - card_id: "E5F6G7H8"
-    filename: "three_little_pigs.mp3"
-    display_name: "Three Little Pigs"
+  - id: "E5F6G7H8"
+    name: "Three Little Pigs"
+    file: "three_little_pigs.mp3"
   - card_id: "A1B2C3D4"
-    filename: "saongaf.mp3"
-    display_name: "The Subtle Art of Not Giving a F*ck"
+    name: "The Subtle Art of Not Giving a F*ck"
+    file: "saongaf.mp3"
 ```
 
 ## References & Inspiration
