@@ -1,0 +1,7 @@
+default_volume: 5
+audiodb_path: "audiodb"
+unknown_card_sfx: "sadtrombone.mp3"
+cards:
+  - id: "9BD1C705"
+    file: "cocktail.mp3"
+    name: "4:05 Cocktail"
