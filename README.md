@@ -44,31 +44,32 @@ Made with love to make little loved ones happy :heart:
 
 *Note: Internal pull-up resistors are enabled in software*
 
-## SD Card Setup
-
-### 1. Audio Files
+## Audio Files
 ```
 /sdcard/
 └── audiodb/                    # configured via `audiodb_path`
     └── three_little_pigs.mp3
-    └── three_little_pigs.mp3
-    └── tsaongaf.mp3
+    └── sad_trombone.mp3
 ```
 
-### 2. Configuration File
-Create `talepod.yaml` on the SD card root:
+## Configuration
+
+Edit `data/config.yaml` taking into account the audio files in the SD card:
 
 ```yaml
-default_volume: 50
+default_volume: 5
 audiodb_path: "audiodb"
 unknown_card_sfx: "sad_trombone.mp3"
 cards:
   - id: "E5F6G7H8"
     name: "Three Little Pigs"
     file: "three_little_pigs.mp3"
-  - card_id: "A1B2C3D4"
-    name: "The Subtle Art of Not Giving a F*ck"
-    file: "saongaf.mp3"
+```
+
+Then upload it to the board:
+
+```
+pio run --target uploadfs
 ```
 
 ## References & Inspiration
