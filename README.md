@@ -29,11 +29,19 @@ Made with love to make little loved ones happy :heart:
 |-----------|--------------|
 | VCC       | 3.3V         |
 | GND       | GND          |
-| MISO      | GPIO 12      |
-| MOSI      | GPIO 13      |
-| SCK       | GPIO 14      |
-| SDA/CS    | GPIO 15      |
-| RST       | GPIO 16      |
+| MISO      | GPIO 41      |
+| MOSI      | GPIO 39      |
+| SCK       | GPIO 40      |
+| SDA/CS    | GPIO 38      |
+| RST       | GPIO  2      |
+
+### Display Module
+| Display Pin | ESP32-S3 Pin |
+|-------------|--------------|
+| VCC         | 3.3V         |
+| GND         | GND          |
+| SCK         | GPIO 40      |
+| SDA/CS      | GPIO 38      |
 
 ### Control Buttons
 | Button      | ESP32-S3 Pin | Connection |
