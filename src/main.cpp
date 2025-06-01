@@ -364,9 +364,6 @@ void setup() {
   debug_print("SD card initialized");
 
   spi_rc522->begin(SCK2, MISO2, MOSI2, SS2);
-  pinMode(RST_PIN, OUTPUT);
-  digitalWrite(RST_PIN, HIGH);
-  delay(100);
   SPI = *spi_rc522;
   mfrc522.PCD_Init(SS2, RST_PIN);
   debug_print("RC522 initialized");
