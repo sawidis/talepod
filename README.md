@@ -40,8 +40,8 @@ Made with love to make little loved ones happy :heart:
 |-------------|--------------|
 | VCC         | 3.3V         |
 | GND         | GND          |
-| SCK         | GPIO 40      |
-| SDA/CS      | GPIO 38      |
+| SCK         | GPIO  9      |
+| SDA/CS      | GPIO  8      |
 
 ### Control Buttons
 | Button      | ESP32-S3 Pin | Connection |

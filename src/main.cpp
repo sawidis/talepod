@@ -1,13 +1,24 @@
-#include <SPI.h>
+#include "Audio.h"
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <FS.h>
+#include <LittleFS.h>
 #include <MFRC522.h>
 #include <SD.h>
-#include <FS.h>
-#include <optional>
+#include <SPI.h>
+#include <Wire.h>
 #include <YAMLDuino.h>
-#include "Audio.h"
-#include <LittleFS.h>
+#include <optional>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+#define OLED_SDA_PIN 8
+#define OLED_SCL_PIN 9
 
 #define RST_PIN     2
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 const String CONF_PATH = "/config.yaml";
 
@@ -262,15 +273,15 @@ class App {
 
     void show_info() {
       debug_print("=== Current Status ===");
-        debug_print("Current volume: %d", volume_level);
-        debug_print("Current state: %d", (int)state);
+      debug_print("Current volume: %d", volume_level);
+      debug_print("Current state: %d", (int)state);
 
-        if (auto activeCard = active_card; activeCard.has_value()) {
-          debug_print("Active card: %s (%s)", activeCard.value().name.c_str(), activeCard.value().id.c_str());
-        } else {
-          debug_print("No active card");
-        }
+      if (auto activeCard = active_card; activeCard.has_value()) {
+        debug_print("Active card: %s (%s)", activeCard.value().name.c_str(), activeCard.value().id.c_str());
+      } else {
+        debug_print("No active card");
       }
+    }
 };
 
 App app;
@@ -367,6 +378,29 @@ void setup() {
   SPI = *spi_rc522;
   mfrc522.PCD_Init(SS2, RST_PIN);
   debug_print("RC522 initialized");
+
+ bool displayFound = false;
+ for(int addr : {0x3C, 0x3D}) {
+    Serial.print("Trying address 0x");
+    Serial.println(addr, HEX);
+
+    if (display.begin(SSD1306_SWITCHCAPVCC, addr)) {
+      Serial.println("Display initialized successfully!");
+      displayFound = true;
+      break;
+    }
+  }
+  if (!displayFound) {
+    Serial.println("Could not initialize display with any address");
+    return;
+  }
+
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println(F("Pure magic."));
+  display.display();
 
   app.setup();
 
