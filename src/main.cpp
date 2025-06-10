@@ -18,29 +18,6 @@
 
 #define RST_PIN     2
 
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
-const String CONF_PATH = "/config.yaml";
-
-struct Card {
-  String id;
-  String file;
-  String name;
-};
-
-struct Config {
-  int defaultVolume;
-  String audiodbPath;
-  String unknownCardSfx;
-  std::vector<Card> cards;
-};
-
-enum AppState {
-  APP_STATE_IDLE,           // No audio loaded/stopped
-  APP_STATE_PLAYING,        // Audio is currently playing
-  APP_STATE_PAUSED,         // Audio is paused
-};
-
 bool debug = true;
 
 void debug_print(const char* format, ...) {
@@ -56,6 +33,152 @@ void debug_print(const char* format, ...) {
 
   va_end(args);
 }
+
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+class Display {
+private:
+  Adafruit_SSD1306* oled;
+  
+public:
+  Display(Adafruit_SSD1306* display) : oled(display) {}
+  
+  void displayRows(const std::vector<String>& rows, int textSize = 1) {
+    oled->clearDisplay();
+    oled->setCursor(0, 0);
+    oled->setTextSize(textSize);
+    
+    for (const auto& row : rows) {
+      oled->println(row);
+    }
+    
+    oled->display();
+  }
+
+  void showPlaying(const String title) {
+    displayRows({"Now playing..", title});
+  }
+
+  void reset() {
+    displayRows({"Tailpod 3000"});
+  }
+
+  void drawCenteredBitmap(const String& bmpPath) {
+  oled->clearDisplay();
+  
+  if (!SD.exists(bmpPath)) {
+    debug_print("File not found: %s", bmpPath.c_str());
+    return;
+  }
+  
+  File bmpFile = SD.open(bmpPath);
+  if (!bmpFile) {
+    debug_print("Failed to open file: %s", bmpPath.c_str());
+    return;
+  }
+  
+  // Read BMP signature
+  uint16_t signature = bmpFile.read() | (bmpFile.read() << 8);
+  if (signature != 0x4D42) { // "BM" in little endian
+    debug_print("Invalid BMP signature: 0x%X", signature);
+    bmpFile.close();
+    return;
+  }
+  
+  // Get data offset (where pixel data actually starts)
+  bmpFile.seek(10);
+  uint32_t dataOffset = bmpFile.read() | (bmpFile.read() << 8) | (bmpFile.read() << 16) | (bmpFile.read() << 24);
+  
+  // Get image dimensions
+  bmpFile.seek(18);
+  int32_t width = bmpFile.read() | (bmpFile.read() << 8) | (bmpFile.read() << 16) | (bmpFile.read() << 24);
+  int32_t height = bmpFile.read() | (bmpFile.read() << 8) | (bmpFile.read() << 16) | (bmpFile.read() << 24);
+  
+  // Get color depth
+  bmpFile.seek(28);
+  uint16_t bitsPerPixel = bmpFile.read() | (bmpFile.read() << 8);
+  
+  debug_print("BMP: %dx%d, %d-bit, data offset: %d", width, height, bitsPerPixel, dataOffset);
+  
+  if (width <= 0 || height <= 0 || width > SCREEN_WIDTH || height > SCREEN_HEIGHT) {
+    debug_print("Invalid dimensions: %dx%d (max: %dx%d)", width, height, SCREEN_WIDTH, SCREEN_HEIGHT);
+    bmpFile.close();
+    return;
+  }
+  
+  if (bitsPerPixel != 1) {
+    debug_print("Only 1-bit BMPs supported, got %d-bit", bitsPerPixel);
+    bmpFile.close();
+    return;
+  }
+  
+  int x = (SCREEN_WIDTH - width) / 2;
+  int y = (SCREEN_HEIGHT - height) / 2;
+  
+  debug_print("Drawing at position: (%d,%d)", x, y);
+  
+  bmpFile.seek(dataOffset);
+  
+  // Calculate row size with padding (BMP rows are padded to 4-byte boundaries)
+  int bytesPerRow = (width + 7) / 8;  // Number of bytes needed for width
+  int paddedRowSize = ((width + 31) / 32) * 4;  // Padded to 4-byte boundary
+  int paddingBytes = paddedRowSize - bytesPerRow;
+  
+  debug_print("Row info: %d bytes per row, %d padding bytes", bytesPerRow, paddingBytes);
+  
+  // Read pixel data (BMPs are stored bottom-to-top)
+  for (int row = height - 1; row >= 0; row--) {
+    for (int col = 0; col < width; col += 8) {
+      uint8_t pixelByte = bmpFile.read();
+      
+      for (int bit = 7; bit >= 0 && (col + (7-bit)) < width; bit--) {
+        if (pixelByte & (1 << bit)) {
+          oled->drawPixel(x + col + (7-bit), y + row, SSD1306_WHITE);
+        }
+      }
+    }
+    
+    // Skip padding bytes at end of each row
+    for (int i = 0; i < paddingBytes; i++) {
+      bmpFile.read();
+    }
+  }
+  
+  bmpFile.close();
+  oled->display();
+  
+  debug_print("Bitmap drawn successfully");
+}
+
+};
+
+const String CONF_PATH = "/config.yaml";
+
+struct Card {
+  String id;
+  String file;
+  String name;
+  bool hasPhoto;
+};
+
+struct Config {
+  int defaultVolume;
+  String audiodbPath;
+  String unknownCardSfx;
+  std::vector<Card> cards;
+};
+
+String get_card_bmp_path(Config config, Card card) {
+  String audio_path = config.audiodbPath + "/" + card.file;
+  return audio_path + ".bmp";
+}
+
+enum AppState {
+  APP_STATE_IDLE,           // No audio loaded/stopped
+  APP_STATE_PLAYING,        // Audio is currently playing
+  APP_STATE_PAUSED,         // Audio is paused
+};
 
 String get_yaml_string(const YAMLNode& parent, const char* key, const String& default_value = "") {
   YAMLNode node = parent[key];
@@ -118,6 +241,7 @@ std::optional<Config> load_config(String conf_path) {
         card.id = get_yaml_string(cardNode, "id");
         card.file = get_yaml_string(cardNode, "file");
         card.name = get_yaml_string(cardNode, "name");
+        card.hasPhoto = SD.exists(get_card_bmp_path(config, card));
 
         if (!card.id.isEmpty() && !card.file.isEmpty()) {
           config.cards.push_back(card);
@@ -152,6 +276,7 @@ class App {
     Audio audio;
     std::optional<Card> active_card;
     int volume_level;
+    Display display_manager;
 
     bool is_playing() const { return state == APP_STATE_PLAYING; }
     bool is_paused() const { return state == APP_STATE_PAUSED; }
@@ -176,6 +301,7 @@ class App {
 
       if (!card.has_value()) {
           String fallback = audio_db_path + "/" + config.value().unknownCardSfx;
+          display_manager.drawCenteredBitmap(fallback + ".bmp");
           audio.connecttoFS(SD, fallback.c_str());
           return;
       }
@@ -194,17 +320,22 @@ class App {
 
       if (audio.connecttoFS(SD, path.c_str())) {
         active_card = card;
+        if (active_card.value().hasPhoto) {
+          String active_card_bmp_path = get_card_bmp_path(config.value(), card.value());
+          display_manager.drawCenteredBitmap(active_card_bmp_path);
+        }
         set_state(APP_STATE_PLAYING);
         debug_print("Audio started successfully");
       } else {
         set_state(APP_STATE_IDLE);
         active_card.reset();
+        display_manager.reset();
         debug_print("Failed to start audio");
       }
     }
 
   public:
-    App() : state(APP_STATE_IDLE), volume_level(0) {}
+    App() : state(APP_STATE_IDLE), volume_level(0), display_manager(&display) {}
 
     void setup() {
       config = load_config(CONF_PATH);
@@ -268,6 +399,7 @@ class App {
       }
       audio.stopSong();
       set_state(APP_STATE_IDLE);
+      display_manager.reset();
       debug_print("Audio stopped");
     }
 
@@ -281,6 +413,13 @@ class App {
       } else {
         debug_print("No active card");
       }
+    }
+
+    void on_song_finished() {
+      set_state(APP_STATE_IDLE);
+      active_card.reset();
+      display_manager.reset();
+      debug_print("Song finished - state set to idle");
     }
 };
 
@@ -320,7 +459,6 @@ void handle_kb_input() {
 }
 
 MFRC522 mfrc522(SS2, RST_PIN);
-
 
 String get_card_uid() {
   String uid = "";
@@ -399,7 +537,7 @@ void setup() {
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
-  display.println(F("Pure magic."));
+  display.println(F("Tailpod 3000"));
   display.display();
 
   app.setup();
@@ -421,4 +559,5 @@ void audio_info(const char *info) {
 
 void audio_eof_mp3(const char *info) {
   debug_print("Audio finished: %s", info);
+  app.on_song_finished();
 }
