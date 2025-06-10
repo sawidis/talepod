@@ -133,7 +133,7 @@ public:
       uint8_t pixelByte = bmpFile.read();
       
       for (int bit = 7; bit >= 0 && (col + (7-bit)) < width; bit--) {
-        if (pixelByte & (1 << bit)) {
+        if (!(pixelByte & (1 << bit))) {
           oled->drawPixel(x + col + (7-bit), y + row, SSD1306_WHITE);
         }
       }
