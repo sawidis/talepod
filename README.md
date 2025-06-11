@@ -43,14 +43,14 @@ Made with love to make little loved ones happy :heart:
 | SCK         | GPIO  9      |
 | SDA/CS      | GPIO  8      |
 
-### Control Buttons
-| Button      | ESP32-S3 Pin | Connection |
-|-------------|--------------|------------|
-| Play/Pause  | GPIO 21      | Button → GPIO 21, other terminal → GND |
-| Volume Up   | GPIO 22      | Button → GPIO 22, other terminal → GND |
-| Volume Down | GPIO 23      | Button → GPIO 23, other terminal → GND |
-
-*Note: Internal pull-up resistors are enabled in software*
+### Rotary Encoder (volume control + pause/resume)
+| Encoder Pin | ESP32-S3 Pin |
+|-------------|--------------|
+| GND         | GND          |
+| +           | 3.3V         |
+| SW          | GPIO 15      |
+| DT          | GPIO 16      |
+| CLK         | GPIO 17      |
 
 ## Audio Files
 ```

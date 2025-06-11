@@ -48,6 +48,8 @@ void setup() {
     }
 
     app.setup();
+    
+    input_handler.initialize();
 
     pinMode(LED_BUILTIN, OUTPUT);
     debug_print("Ready!");
@@ -55,6 +57,7 @@ void setup() {
 
 void loop() {
     input_handler.handle_keyboard_input();
+    input_handler.handle_rotary_encoder();
     handle_nfc();
     app.loop();
     vTaskDelay(1);
