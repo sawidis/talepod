@@ -18,16 +18,13 @@ InputHandler input_handler(app);
 NFCReader nfc_reader;
 
 void handle_nfc() {
-    if (!nfc_reader.is_card_present()) {
+    String card_uid = nfc_reader.poll_new_card();
+    if (card_uid.isEmpty()) {
         return;
     }
 
-    String card_uid = nfc_reader.get_card_uid();
     debug_print("NFC Card detected: %s", card_uid.c_str());
-
     app.play(card_uid);
-    nfc_reader.halt_card();
-    delay(1000);
 }
 
 void setup() {
